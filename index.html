@@ -1,0 +1,2111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wyze – Bird Watch IAP Prototype</title>
+<style>
+@font-face { font-family: Gilroy; src: url(https://dpf1vvfzejmqw.cloudfront.net/static_common/fonts/Gilroy-Regular.woff2) format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: Gilroy; src: url(https://dpf1vvfzejmqw.cloudfront.net/static_common/fonts/Gilroy-Medium.woff2) format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: Gilroy; src: url(https://dpf1vvfzejmqw.cloudfront.net/static_common/fonts/Gilroy-SemiBold.woff2) format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: Gilroy; src: url(https://dpf1vvfzejmqw.cloudfront.net/static_common/fonts/Gilroy-Bold.woff2) format("woff2"); font-weight: 700; font-display: swap; }
+
+:root {
+  --green: #1DF0BB;
+  --green-deep: #00C896;
+  --purple: #4E2FD2;
+  --purple-hover: #3D23B0;
+  --purple-light: #F5F4FF;
+  --purple-border: #D8D4F5;
+  --near-black: #1F1F1F;
+  --white: #FFFFFF;
+  --off-white: #F8F9FA;
+  --gray-100: #F0F0F0;
+  --gray-200: #E8E8E8;
+  --gray-300: #D0D0D0;
+  --text-primary: #1F1F1F;
+  --text-secondary: #636363;
+  --text-muted: #9B9B9B;
+  --phone-bg: #F2F2F2;
+  --canvas-bg: #EFECE4;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  font-family: Gilroy, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--canvas-bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+.stage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.phone {
+  width: 390px;
+  height: 844px;
+  background: var(--phone-bg);
+  border-radius: 44px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.18), 0 0 0 10px #111 inset;
+  position: relative;
+  overflow: hidden;
+}
+
+.phone-screen {
+  position: absolute;
+  inset: 10px;
+  border-radius: 36px;
+  overflow: hidden;
+  background: var(--phone-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 26px 6px;
+  font-size: 15px;
+  font-weight: 600;
+  flex: 0 0 auto;
+  background: var(--phone-bg);
+}
+.status-icons { display: flex; gap: 5px; align-items: center; }
+
+/* App header */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  background: var(--phone-bg);
+}
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--near-black);
+}
+.app-title {
+  font-size: 17px;
+  font-weight: 600;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.app-title .cam-square {
+  width: 22px;
+  height: 22px;
+  border: 1.6px solid var(--near-black);
+  border-radius: 4px;
+  position: relative;
+}
+.app-title .cam-square::before, .app-title .cam-square::after {
+  content: ''; position: absolute;
+  background: var(--near-black);
+}
+.app-title .cam-square::before {
+  inset: 4px; border-radius: 1px;
+  background: transparent;
+  border-top: 1.6px solid var(--near-black);
+  border-left: 1.6px solid var(--near-black);
+  border-right: 0; border-bottom: 0;
+  transform: rotate(-45deg);
+}
+.app-title .cam-square::after {
+  display: none;
+}
+
+/* Get Bird pill */
+.get-bird-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1.5px solid var(--near-black);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--white);
+  cursor: pointer;
+  color: var(--near-black);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.get-bird-pill:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.get-bird-pill:active { transform: translateY(0); }
+.bird-svg {
+  width: 16px; height: 16px;
+  display: inline-block;
+}
+
+/* Scroll body */
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 14px 14px;
+}
+.body::-webkit-scrollbar { width: 0; }
+
+/* Live video tile */
+.live-tile {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(150deg, #4a6b3e 0%, #2c4422 40%, #1a2e15 100%);
+  margin-bottom: 18px;
+}
+.live-tile::before {
+  /* foliage texture */
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 22% 32%, rgba(120,160,80,0.55) 0, transparent 22%),
+    radial-gradient(circle at 68% 18%, rgba(90,130,60,0.5) 0, transparent 20%),
+    radial-gradient(circle at 80% 60%, rgba(70,110,50,0.6) 0, transparent 24%),
+    radial-gradient(circle at 10% 75%, rgba(140,180,90,0.45) 0, transparent 20%),
+    radial-gradient(circle at 45% 88%, rgba(80,120,55,0.5) 0, transparent 18%),
+    radial-gradient(circle at 90% 90%, rgba(110,150,70,0.55) 0, transparent 22%);
+  filter: blur(0.4px);
+}
+.live-tile::after {
+  /* sky peek top-left */
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 38%; height: 30%;
+  background: linear-gradient(160deg, #d6ddc7 0%, #b0bba3 60%, transparent 100%);
+  opacity: 0.85;
+}
+.live-badge {
+  position: absolute;
+  top: 12px; left: 12px;
+  background: #B73A2E;
+  color: #fff;
+  padding: 4px 10px 4px 18px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 2;
+  letter-spacing: 0.2px;
+}
+.live-badge::before {
+  content: ''; position: absolute;
+  width: 6px; height: 6px;
+  background: #fff;
+  border-radius: 50%;
+  left: 8px; top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Section heading */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 6px 4px 10px;
+}
+.section-title { font-size: 17px; font-weight: 700; }
+.chev {
+  width: 18px; height: 18px;
+  color: var(--text-secondary);
+}
+
+/* Recent sightings */
+.sightings {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.sight-card {
+  background: var(--white);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.sight-thumb {
+  width: 100%;
+  aspect-ratio: 1.15;
+  position: relative;
+  background: #d8e0d2;
+}
+.sight-thumb .label {
+  position: absolute;
+  bottom: 4px; left: 4px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+.sight-meta { padding: 8px 10px 10px; }
+.sight-name { font-size: 14px; font-weight: 700; }
+.sight-time { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+/* Bird numbers card */
+.numbers-card {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 14px 14px 16px;
+  margin-bottom: 18px;
+}
+.numbers-card .head {
+  margin-bottom: 4px;
+}
+.numbers-card .title { font-size: 16px; font-weight: 700; }
+.numbers-card .range { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+.chart-wrap {
+  position: relative;
+  margin-top: 14px;
+  height: 130px;
+}
+.grid-line {
+  position: absolute;
+  left: 8px; right: 30px;
+  border-top: 1px dashed #E2E2E2;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.grid-line span { position: absolute; right: -26px; top: -7px; }
+.bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 8px 18px 8px;
+}
+.bar {
+  width: 11px;
+  background: var(--green);
+  border-radius: 3px 3px 0 0;
+}
+.x-axis {
+  position: absolute;
+  left: 8px; right: 30px;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.x-axis span:last-child { color: var(--text-muted); }
+.visits-pill {
+  display: inline-block;
+  margin-top: 12px;
+  background: var(--phone-bg);
+  padding: 7px 11px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.visits-pill b { display: block; font-size: 13px; }
+
+/* ─────────── Screen stack ─────────── */
+.screens {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--phone-bg);
+  transform: translateX(100%);
+  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.screen.active { transform: translateX(0); }
+.screen[data-screen="home"] { transform: translateX(0); }
+.screen[data-screen="home"].pushed { transform: translateX(-30%); }
+
+/* ─── Sightings list screen ─── */
+.sightings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 6px;
+}
+.sightings-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+}
+.icon-row { display: flex; gap: 8px; }
+.round-icon {
+  width: 36px; height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--white);
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--near-black);
+  border: 1px solid #E5E5E5;
+}
+.day-label {
+  padding: 8px 18px 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.sight-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 14px 14px;
+}
+.sight-list::-webkit-scrollbar { width: 0; }
+.sight-row {
+  display: flex;
+  align-items: center;
+  background: var(--white);
+  border-radius: 14px;
+  padding: 10px;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.sight-row .thumb {
+  width: 82px; height: 70px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex: 0 0 82px;
+  position: relative;
+}
+.sight-row .thumb .corner {
+  position: absolute;
+  bottom: 5px; right: 5px;
+  width: 16px; height: 16px;
+  background: rgba(0,0,0,0.55);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.sight-row .meta {
+  flex: 1;
+}
+.sight-row .meta .name { font-size: 15px; font-weight: 700; }
+.sight-row .meta .time { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+/* Inline upsell row */
+.inline-upsell {
+  display: flex;
+  align-items: center;
+  background: #EEF4FB;
+  border-radius: 14px;
+  padding: 10px;
+  gap: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.inline-upsell:hover { transform: translateY(-1px); }
+.inline-upsell .thumb-up {
+  width: 82px; height: 70px;
+  border-radius: 10px;
+  background: #DCE4EE;
+  flex: 0 0 82px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #8893A3;
+}
+.inline-upsell .text {
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.inline-upsell .text .brand {
+  color: var(--purple);
+  font-weight: 700;
+}
+
+/* ─── Filter By sheet ─── */
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+  z-index: 15;
+}
+.sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+.filter-sheet {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  background: var(--phone-bg);
+  border-radius: 22px 22px 0 0;
+  z-index: 16;
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+  display: flex;
+  flex-direction: column;
+  max-height: 70%;
+}
+.filter-sheet.open { transform: translateY(0); }
+.sheet-handle {
+  width: 38px; height: 4px;
+  background: #C7C7C7;
+  border-radius: 4px;
+  margin: 8px auto 4px;
+}
+.sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px 8px;
+}
+.sheet-head .ttl { font-size: 18px; font-weight: 700; }
+.sheet-head .clear { font-size: 14px; color: var(--text-primary); font-weight: 600; cursor: pointer; }
+.filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-top: 1px solid #E5E5E5;
+}
+.filter-row:first-of-type { border-top: 1px solid #E5E5E5; }
+.filter-row .label { font-size: 15px; font-weight: 500; }
+.checkbox {
+  width: 20px; height: 20px;
+  border: 1.6px solid #C8C8C8;
+  border-radius: 5px;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.checkbox.checked {
+  background: var(--purple);
+  border-color: var(--purple);
+}
+.checkbox.checked::after {
+  content: '';
+  width: 11px; height: 6px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+
+.filter-upsell {
+  background: #fff;
+  margin: 14px 16px 0;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #E5E5E5;
+}
+.filter-upsell .top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+}
+.filter-upsell .ico {
+  width: 44px; height: 44px;
+  flex: 0 0 44px;
+  background: #F0F0F0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--near-black);
+}
+.filter-upsell .copy {
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.filter-upsell .copy .brand { color: var(--purple); font-weight: 700; }
+.filter-upsell .btn {
+  width: 100%;
+  text-align: center;
+  padding: 13px 0;
+  border-top: 1px solid #E5E5E5;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--near-black);
+  background: #fff;
+}
+.filter-upsell .btn:hover { background: #F8F8F8; }
+
+.sheet-foot {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #E5E5E5;
+  background: #fff;
+}
+.sheet-foot .btn {
+  padding: 16px 0;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--near-black);
+  font-family: inherit;
+}
+.sheet-foot .btn.apply { background: var(--gray-100); color: var(--text-muted); }
+
+/* ─── Bird Numbers detail screen ─── */
+.numbers-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px 6px;
+  position: relative;
+}
+.numbers-header .back { width: 28px; }
+.numbers-header .title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 17px;
+  font-weight: 700;
+}
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--gray-200);
+  padding: 6px 14px 0;
+  margin-bottom: 10px;
+}
+.tabs .tab {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2.5px solid transparent;
+  margin-bottom: -1px;
+}
+.tabs .tab.active {
+  color: var(--near-black);
+  border-bottom-color: var(--green-deep);
+}
+.numbers-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px 18px;
+}
+.numbers-body::-webkit-scrollbar { width: 0; }
+.range-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 4px 2px 10px;
+}
+.range-row .label { font-size: 14px; font-weight: 700; }
+.range-row .filter-ico {
+  width: 28px; height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--near-black);
+}
+.detail-chart-card {
+  background: var(--white);
+  border-radius: 14px;
+  padding: 16px 14px 14px;
+  margin-bottom: 18px;
+}
+.detail-chart-card .chart-wrap { height: 150px; margin-top: 6px; }
+
+.standout-h {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 4px 2px 10px;
+}
+.standout-upsell {
+  background: var(--white);
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid #E8E8E8;
+  margin-bottom: 14px;
+}
+.standout-upsell .copy {
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+.standout-upsell .copy b { font-weight: 700; }
+.standout-upsell .btn {
+  width: 100%;
+  display: block;
+  text-align: center;
+  padding: 12px 0;
+  background: #fff;
+  border: 1px solid #D8D8D8;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--near-black);
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.standout-upsell .btn:hover { background: #F4F4F4; }
+
+.locked-rank {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 6px;
+  opacity: 0.55;
+}
+.locked-rank .num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #E5E5E5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  flex: 0 0 22px;
+}
+.locked-rank .bird-card {
+  width: 56px; height: 50px;
+  background: #ECECEC;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #B8B8B8;
+  flex: 0 0 56px;
+}
+.locked-rank .skel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.locked-rank .bar1 {
+  height: 11px;
+  background: #ECECEC;
+  border-radius: 3px;
+  width: 80%;
+}
+.locked-rank .bar2 {
+  height: 9px;
+  background: #ECECEC;
+  border-radius: 3px;
+  width: 60%;
+}
+
+/* ─── Event Detail screen ─── */
+.screen[data-screen="event"] {
+  background: #0A0A0A;
+  color: #fff;
+}
+.event-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px 8px;
+  background: #0A0A0A;
+  position: relative;
+}
+.event-header .icon-btn { color: #fff; }
+.event-header .title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 17px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.event-header .title svg { color: #fff; }
+.event-header .right {
+  margin-left: auto;
+  color: #fff;
+}
+.event-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 16px 12px;
+}
+.event-meta .name { font-size: 16px; font-weight: 700; color: #fff; }
+.event-meta .ts { font-size: 12px; color: #BFBFBF; margin-top: 2px; }
+.event-meta .bird-bubble {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: #1E9CD9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.event-video {
+  width: 100%;
+  aspect-ratio: 16 / 11;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(165deg, #6c8a4e 0%, #43623c 45%, #2c4a36 100%);
+}
+.event-video::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 18% 30%, rgba(180,200,120,0.55) 0, transparent 28%),
+    radial-gradient(circle at 75% 20%, rgba(180,210,130,0.45) 0, transparent 26%),
+    radial-gradient(circle at 60% 80%, rgba(110,150,70,0.65) 0, transparent 28%),
+    radial-gradient(circle at 90% 75%, rgba(80,120,60,0.65) 0, transparent 30%),
+    radial-gradient(circle at 35% 95%, rgba(70,110,50,0.65) 0, transparent 28%);
+}
+.event-video .mountain {
+  position: absolute;
+  top: 8%; left: 0; right: 0;
+  height: 22%;
+  background: linear-gradient(180deg, #7d9ba9 0%, #5a7585 60%, transparent 100%);
+  opacity: 0.7;
+  -webkit-mask: linear-gradient(180deg, #000 30%, transparent);
+}
+.event-video .bird-art {
+  position: absolute;
+  bottom: 4%; left: 22%;
+  width: 38%;
+}
+.event-video .bird-art svg { width: 100%; height: auto; display: block; }
+
+.feedback-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  background: #0A0A0A;
+  position: relative;
+}
+.feedback-bar .q { font-size: 14px; color: #DADADA; }
+.thumb-btn {
+  width: 32px; height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #DADADA;
+  border-radius: 8px;
+}
+.thumb-btn:hover { background: rgba(255,255,255,0.08); }
+.thumb-btn.active { color: var(--green); }
+.bw-pill {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border-radius: 999px;
+  padding: 4px 10px 4px 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--near-black);
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+.bw-pill .bird-mini {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: #1E9CD9;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+.bw-pill .play-tri {
+  width: 0; height: 0;
+  border-left: 7px solid var(--near-black);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  margin-left: 2px;
+}
+
+.event-spacer {
+  flex: 1;
+  background: #0A0A0A;
+}
+
+.event-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 12px 8px 8px;
+  background: #0A0A0A;
+}
+.event-actions .act {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #DADADA;
+  cursor: pointer;
+  padding: 8px 0;
+}
+.event-actions .act svg { color: #DADADA; }
+.event-actions .act.locked { color: #666; cursor: default; }
+.event-actions .act.locked svg { color: #666; }
+.event-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  padding: 4px 0 4px;
+  background: #0A0A0A;
+}
+.event-dots .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #444;
+}
+.event-dots .dot.active { background: var(--green); }
+
+/* ─── Feedback sheets (thumb up / down) ─── */
+.fb-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 17;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.fb-backdrop.open { opacity: 1; pointer-events: auto; }
+.fb-sheet {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  background: var(--phone-bg);
+  border-radius: 22px 22px 0 0;
+  z-index: 18;
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary);
+}
+.fb-sheet.open { transform: translateY(0); }
+.fb-sheet .sheet-handle { background: #C7C7C7; margin: 8px auto 8px; }
+.fb-sheet h3 {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 12px 24px 4px;
+  line-height: 1.35;
+}
+.fb-sheet h3 .top { display: block; font-weight: 700; }
+.fb-sheet .priv {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  padding: 6px 26px 14px;
+}
+.fb-sheet .priv a { color: var(--green-deep); text-decoration: none; }
+.fb-sheet .fb-row {
+  background: #fff;
+  padding: 16px 18px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  border-top: 1px solid #E5E5E5;
+  display: flex;
+  align-items: center;
+}
+.fb-sheet .fb-row.input {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.fb-sheet .fb-row:last-of-type { border-bottom: 1px solid #E5E5E5; }
+.fb-sheet .cancel-row {
+  background: #fff;
+  text-align: center;
+  padding: 16px 0;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+/* ─────────── IAP Modal ─────────── */
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.modal-backdrop.open { opacity: 1; pointer-events: auto; }
+
+.modal {
+  position: absolute;
+  left: 10px; right: 10px;
+  bottom: 10px;
+  top: 60px;
+  background: var(--white);
+  border-radius: 28px 28px 36px 36px;
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(110%);
+  transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+  overflow: hidden;
+}
+.modal.open { transform: translateY(0); }
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  padding: 18px 18px 4px;
+}
+.modal-title {
+  flex: 1;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+}
+.modal-close {
+  width: 28px; height: 28px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--near-black);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.compare-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 12px 0 6px;
+  position: relative;
+  color: var(--text-secondary);
+}
+.compare-row .right { color: var(--near-black); }
+.compare-row .right .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--purple);
+  font-weight: 700;
+}
+.compare-row .right .badge::before {
+  content: '';
+  width: 12px; height: 12px;
+  background: var(--purple);
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'><path d='M12 2L9.4 8.6 2 9.27l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7 5.46-4.73L14.6 8.6 12 2z'/></svg>") center/contain no-repeat;
+          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'><path d='M12 2L9.4 8.6 2 9.27l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7 5.46-4.73L14.6 8.6 12 2z'/></svg>") center/contain no-repeat;
+}
+
+.compare-card {
+  position: relative;
+  margin: 0 14px;
+  display: grid;
+  grid-template-columns: 1fr 100px 1fr;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 0;
+}
+.compare-card .divider {
+  position: absolute;
+  left: 50%; top: 6px; bottom: 6px;
+  border-left: 1.5px dashed var(--gray-300);
+  pointer-events: none;
+}
+.cam-img {
+  width: 100px; height: 100px;
+  background: var(--white);
+  z-index: 2;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+/* Stacked feature pills */
+.pill-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  z-index: 1;
+  min-width: 0;
+}
+.pill-stack.left { align-items: flex-start; }
+.pill-stack.right { align-items: flex-end; }
+.f-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #ECECEC;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.f-pill .ico { width: 11px; height: 11px; display: inline-block; flex: 0 0 11px; }
+.f-pill.thumb {
+  background: linear-gradient(135deg, #d4d4d4, #b8b8b8);
+  color: #555;
+  padding: 5px 7px;
+  border-radius: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  font-size: 9px;
+  line-height: 1.15;
+  width: 70px;
+  height: 44px;
+  justify-content: flex-end;
+}
+
+.pill-stack.right .f-pill {
+  background: var(--purple);
+  color: #fff;
+}
+.pill-stack.right .f-pill.video {
+  background: transparent;
+  padding: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  width: 78px;
+  height: 50px;
+  position: relative;
+  align-self: flex-end;
+}
+.video-thumb {
+  width: 100%; height: 100%;
+  background: linear-gradient(160deg, #6a9856 0%, #3d6b30 60%, #2a4d22 100%);
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.video-thumb::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 30% 35%, rgba(160,180,100,0.55) 0, transparent 30%),
+    radial-gradient(circle at 70% 70%, rgba(80,120,60,0.6) 0, transparent 30%);
+}
+.video-thumb .play {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 22px; height: 22px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.video-thumb .play::before {
+  content: '';
+  border-left: 6px solid var(--purple);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  margin-left: 2px;
+}
+.video-thumb .tag {
+  position: absolute;
+  bottom: 4px; left: 4px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 600;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+/* Subhead */
+.sub-block {
+  text-align: center;
+  padding: 6px 24px 12px;
+}
+.sub-block h2 {
+  font-size: 19px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.sub-block h2 .accent { color: var(--purple); }
+.sub-block p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* Plan tabs */
+.plan-tabs {
+  display: flex;
+  margin: 0 18px;
+  border-bottom: 1px solid var(--gray-200);
+}
+.plan-tab {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.plan-tab.active {
+  color: var(--near-black);
+  border-bottom-color: var(--near-black);
+}
+
+/* Price cards */
+.price-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 12px 18px 10px;
+}
+.price-card {
+  background: var(--purple-light);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 11px 12px;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s;
+}
+.price-card.selected { border-color: var(--purple); }
+.price-card .label {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.price-card .save {
+  color: var(--purple);
+  font-size: 10px;
+  font-weight: 700;
+  background: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: none;
+}
+.price-card.annual .save { display: inline-block; }
+.price-card .amount {
+  font-size: 17px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+.price-card .amount span { font-size: 11px; font-weight: 500; color: var(--text-secondary); }
+.price-card .radio {
+  position: absolute;
+  top: 11px; right: 11px;
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--purple-border);
+  border-radius: 50%;
+  background: #fff;
+}
+.price-card.selected .radio {
+  border-color: var(--purple);
+  background: var(--purple);
+  box-shadow: inset 0 0 0 3px #fff;
+}
+.price-card .label {
+  padding-right: 22px;
+}
+
+/* footer */
+.modal-foot {
+  padding: 4px 18px 18px;
+  margin-top: auto;
+}
+.fine-print {
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin: 6px 0 10px;
+}
+.cta {
+  width: 100%;
+  background: var(--purple);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 0;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cta:hover { background: var(--purple-hover); }
+.tos {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 10px;
+  text-decoration: underline;
+}
+
+/* Bird SVG colors */
+.sight-thumb svg { display: block; width: 100%; height: 100%; }
+
+/* Home indicator */
+.home-ind {
+  position: absolute;
+  bottom: 6px; left: 50%;
+  transform: translateX(-50%);
+  width: 120px; height: 4px;
+  background: #1F1F1F;
+  border-radius: 4px;
+}
+
+.hint {
+  text-align: center;
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.hint code {
+  background: rgba(0,0,0,0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div>
+    <div class="phone">
+      <div class="phone-screen">
+        <!-- Status bar -->
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-icons">
+            <!-- signal -->
+            <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="7" width="3" height="4" rx=".5"/><rect x="4" y="5" width="3" height="6" rx=".5"/><rect x="8" y="3" width="3" height="8" rx=".5"/><rect x="12" y="0" width="3" height="11" rx=".5"/></svg>
+            <!-- wifi -->
+            <svg width="16" height="11" viewBox="0 0 16 11"><path d="M8 11l2.2-2.4a3 3 0 00-4.4 0L8 11z"/><path d="M12.6 6.4l1.4-1.5a8.5 8.5 0 00-12 0l1.4 1.5a6.5 6.5 0 019.2 0z" opacity=".9"/><path d="M15.7 3.3L17 1.9a13 13 0 00-18 0l1.3 1.4a11 11 0 0115.4 0z" opacity=".8"/></svg>
+            <!-- battery -->
+            <svg width="25" height="11" viewBox="0 0 25 11"><rect x="0" y="0" width="22" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1"/><rect x="2" y="2" width="18" height="7" rx="1.5"/><rect x="23" y="3.5" width="2" height="4" rx="1"/></svg>
+          </div>
+        </div>
+
+        <!-- Screens -->
+        <div class="screens">
+
+        <!-- ── HOME SCREEN ── -->
+        <div class="screen" data-screen="home">
+
+        <!-- Header -->
+        <div class="app-header">
+          <button class="icon-btn" aria-label="Back">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="app-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3"/>
+              <line x1="3" y1="3" x2="21" y2="21"/>
+            </svg>
+            <span>Joe's Bird Feeder</span>
+          </div>
+          <button class="get-bird-pill" id="getBirdBtn">
+            Get
+            <svg class="bird-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="birdGrad" x1="0" y1="0" x2="24" y2="24">
+                  <stop offset="0%" stop-color="#4E2FD2"/>
+                  <stop offset="100%" stop-color="#1DF0BB"/>
+                </linearGradient>
+              </defs>
+              <!-- bird body silhouette -->
+              <path d="M3 14c2-3 5-5 8-5 1.8 0 3 .6 4 1.5L20 8l-1 4 2 1-2.5 1.2c-.5 2.4-2.8 4.3-5.5 4.3-3 0-5.5-2-7-3.5z" fill="url(#birdGrad)"/>
+              <circle cx="17.5" cy="11.5" r=".8" fill="#fff"/>
+            </svg>
+          </button>
+          <button class="icon-btn" aria-label="Settings">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="body">
+          <div class="live-tile">
+            <div class="live-badge">Live</div>
+          </div>
+
+          <div class="section-head" id="openSightings" style="cursor:pointer;">
+            <span class="section-title">Recent Sightings</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="sightings">
+            <div class="sight-card">
+              <div class="sight-thumb" style="background:linear-gradient(160deg,#7a8c64,#4a5538);">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+                  <rect width="100" height="100" fill="url(#g1)"/>
+                  <defs><linearGradient id="g1" x1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ea076"/><stop offset="1" stop-color="#3a4a2c"/></linearGradient></defs>
+                  <ellipse cx="55" cy="60" rx="22" ry="13" fill="#1a1a1a"/>
+                  <circle cx="40" cy="52" r="9" fill="#1a1a1a"/>
+                  <circle cx="38" cy="50" r="1.6" fill="#fff"/>
+                  <polygon points="32,52 25,53 32,55" fill="#d4a017"/>
+                  <line x1="60" y1="68" x2="60" y2="80" stroke="#2a1a0a" stroke-width="1.5"/>
+                  <line x1="55" y1="68" x2="55" y2="80" stroke="#2a1a0a" stroke-width="1.5"/>
+                </svg>
+                <span class="label">Bird</span>
+              </div>
+              <div class="sight-meta">
+                <div class="sight-name">Bird</div>
+                <div class="sight-time">1 hr ago</div>
+              </div>
+            </div>
+            <div class="sight-card">
+              <div class="sight-thumb" style="background:linear-gradient(160deg,#a8b8c8,#7a8a9a);">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+                  <rect width="100" height="55" fill="#bdcbd6"/>
+                  <rect y="55" width="100" height="45" fill="#9ba87a"/>
+                  <rect x="55" y="22" width="40" height="35" fill="#d8b88c"/>
+                  <polygon points="55,22 75,8 95,22" fill="#7a3c2a"/>
+                  <ellipse cx="40" cy="62" rx="14" ry="8" fill="#c44a2a"/>
+                  <circle cx="30" cy="58" r="6" fill="#a33020"/>
+                  <polygon points="24,58 18,59 24,61" fill="#2a1a0a"/>
+                </svg>
+                <span class="label">Bird</span>
+              </div>
+              <div class="sight-meta">
+                <div class="sight-name">Bird</div>
+                <div class="sight-time">1 hr ago</div>
+              </div>
+            </div>
+            <div class="sight-card">
+              <div class="sight-thumb" style="background:linear-gradient(160deg,#c8d3a8,#6a7a4a);">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+                  <rect width="100" height="100" fill="url(#g3)"/>
+                  <defs><linearGradient id="g3" x1="0" x2="0" y2="1"><stop offset="0" stop-color="#bcc890"/><stop offset="1" stop-color="#5a6a3a"/></linearGradient></defs>
+                  <line x1="0" y1="60" x2="100" y2="65" stroke="#5a4030" stroke-width="3"/>
+                  <ellipse cx="50" cy="50" rx="20" ry="11" fill="#3a3a3a"/>
+                  <circle cx="68" cy="46" r="8" fill="#3a3a3a"/>
+                  <circle cx="70" cy="44" r="1.3" fill="#fff"/>
+                  <polygon points="76,46 82,47 76,49" fill="#d4a017"/>
+                </svg>
+                <span class="label">Bird</span>
+              </div>
+              <div class="sight-meta">
+                <div class="sight-name">Bird</div>
+                <div class="sight-time">2 hrs ago</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bird Numbers -->
+          <div class="numbers-card" id="openNumbers" style="cursor:pointer;">
+            <div class="head">
+              <div class="title">Bird Numbers</div>
+              <div class="range">Nov 2nd to Nov 8th</div>
+            </div>
+            <div class="chart-wrap">
+              <div class="grid-line" style="top:0;"><span>16</span></div>
+              <div class="grid-line" style="top:25%;"><span>12</span></div>
+              <div class="grid-line" style="top:50%;"><span>8</span></div>
+              <div class="grid-line" style="top:75%;"><span>4</span></div>
+              <div class="grid-line" style="top:calc(100% - 18px);"><span>0</span></div>
+              <div class="bars">
+                <div class="bar" style="height:55%"></div>
+                <div class="bar" style="height:75%"></div>
+                <div class="bar" style="height:35%"></div>
+                <div class="bar" style="height:40%"></div>
+                <div class="bar" style="height:45%"></div>
+                <div class="bar" style="height:90%"></div>
+                <div class="bar" style="height:50%"></div>
+                <div class="bar" style="height:35%"></div>
+                <div class="bar" style="height:25%"></div>
+                <div class="bar" style="height:60%"></div>
+                <div class="bar" style="height:65%"></div>
+              </div>
+              <div class="x-axis">
+                <span>12 pm</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span><span style="opacity:.5">12 am</span>
+              </div>
+            </div>
+            <div class="visits-pill">
+              <b>45 visits</b>
+              in total
+            </div>
+          </div>
+        </div>
+        </div><!-- /screen home -->
+
+        <!-- ── SIGHTINGS LIST SCREEN ── -->
+        <div class="screen" data-screen="sightings">
+          <div class="app-header">
+            <button class="icon-btn" id="backFromSightings" aria-label="Back">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="app-title">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="3"/>
+                <line x1="3" y1="3" x2="21" y2="21"/>
+              </svg>
+              <span>Joe's Bird Feeder</span>
+            </div>
+            <button class="get-bird-pill" id="getBirdBtn2">
+              Get
+              <svg class="bird-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 14c2-3 5-5 8-5 1.8 0 3 .6 4 1.5L20 8l-1 4 2 1-2.5 1.2c-.5 2.4-2.8 4.3-5.5 4.3-3 0-5.5-2-7-3.5z" fill="url(#birdGrad)"/>
+                <circle cx="17.5" cy="11.5" r=".8" fill="#fff"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="sightings-header">
+            <h1>Recent Sightings</h1>
+            <div class="icon-row">
+              <span class="round-icon" aria-label="Download">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </span>
+              <span class="round-icon" aria-label="Calendar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </span>
+              <span class="round-icon" id="openFilter" aria-label="Filter">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <div class="day-label">Today</div>
+          <div class="sight-list">
+            <div class="sight-row">
+              <div class="thumb" style="background:linear-gradient(160deg,#7a8c64,#3a4a2c);">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" width="100%" height="100%">
+                  <ellipse cx="55" cy="58" rx="24" ry="14" fill="#3a4a52"/>
+                  <circle cx="38" cy="50" r="10" fill="#3a4a52"/>
+                  <circle cx="36" cy="48" r="1.8" fill="#fff"/>
+                  <polygon points="30,50 22,52 30,54" fill="#d4a017"/>
+                  <line x1="55" y1="70" x2="55" y2="82" stroke="#2a1a0a" stroke-width="1.5"/>
+                </svg>
+                <span class="corner">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </span>
+              </div>
+              <div class="meta">
+                <div class="name">Bird</div>
+                <div class="time">2:20 PM</div>
+              </div>
+            </div>
+
+            <div class="sight-row">
+              <div class="thumb" style="background:linear-gradient(160deg,#a8b8c8,#7a8a9a);">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" width="100%" height="100%">
+                  <rect width="100" height="55" fill="#bdcbd6"/>
+                  <rect y="55" width="100" height="45" fill="#9ba87a"/>
+                  <rect x="55" y="22" width="40" height="35" fill="#d8b88c"/>
+                  <polygon points="55,22 75,8 95,22" fill="#7a3c2a"/>
+                  <ellipse cx="38" cy="62" rx="16" ry="9" fill="#c44a2a"/>
+                  <circle cx="26" cy="58" r="7" fill="#a33020"/>
+                  <polygon points="19,58 13,59 19,61" fill="#2a1a0a"/>
+                </svg>
+                <span class="corner">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </span>
+              </div>
+              <div class="meta">
+                <div class="name">Bird</div>
+                <div class="time">12:34 PM</div>
+              </div>
+            </div>
+
+            <!-- Inline upsell card -->
+            <div class="inline-upsell" data-upsell="list">
+              <div class="thumb-up">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14c2-3 5-5 8-5 1.8 0 3 .6 4 1.5L20 8l-1 4 2 1-2.5 1.2c-.5 2.4-2.8 4.3-5.5 4.3-3 0-5.5-2-7-3.5z"/></svg>
+              </div>
+              <div class="text">
+                Get <span class="brand">Bird Watch</span> to capture bird species on video.
+              </div>
+            </div>
+
+            <div class="sight-row">
+              <div class="thumb" style="background:linear-gradient(160deg,#c8d3a8,#5a6a3a);">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" width="100%" height="100%">
+                  <rect width="100" height="60" fill="#bcc890"/>
+                  <rect y="60" width="100" height="40" fill="#5a6a3a"/>
+                  <line x1="0" y1="65" x2="100" y2="68" stroke="#5a4030" stroke-width="3"/>
+                  <ellipse cx="50" cy="52" rx="22" ry="12" fill="#3a3a3a"/>
+                  <circle cx="70" cy="46" r="9" fill="#3a3a3a"/>
+                  <circle cx="72" cy="44" r="1.4" fill="#fff"/>
+                  <polygon points="78,46 86,47 78,49" fill="#d4a017"/>
+                </svg>
+                <span class="corner">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </span>
+              </div>
+              <div class="meta">
+                <div class="name">Bird</div>
+                <div class="time">10:34 AM</div>
+              </div>
+            </div>
+
+            <div class="day-label" style="padding-left:4px;">Yesterday</div>
+
+            <div class="sight-row">
+              <div class="thumb" style="background:linear-gradient(160deg,#5a6a4a,#2a3a22);">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" width="100%" height="100%">
+                  <rect width="100" height="100" fill="#4a5a3a"/>
+                  <line x1="20" y1="0" x2="35" y2="100" stroke="#2a1a0a" stroke-width="6"/>
+                  <ellipse cx="55" cy="55" rx="20" ry="11" fill="#1a1a1a"/>
+                  <circle cx="40" cy="48" r="8" fill="#1a1a1a"/>
+                  <circle cx="38" cy="46" r="1.4" fill="#fff"/>
+                </svg>
+                <span class="corner">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </span>
+              </div>
+              <div class="meta">
+                <div class="name">Bird</div>
+                <div class="time">7:34 PM</div>
+              </div>
+            </div>
+
+            <div class="sight-row">
+              <div class="thumb" style="background:linear-gradient(160deg,#8a7a5a,#4a3a22);">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" width="100%" height="100%">
+                  <rect width="100" height="100" fill="#6a5a3a"/>
+                  <line x1="0" y1="50" x2="100" y2="55" stroke="#3a2a1a" stroke-width="4"/>
+                  <ellipse cx="50" cy="48" rx="18" ry="10" fill="#2a1a0a"/>
+                  <circle cx="36" cy="42" r="7" fill="#2a1a0a"/>
+                  <circle cx="34" cy="40" r="1.2" fill="#fff"/>
+                </svg>
+                <span class="corner">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </span>
+              </div>
+              <div class="meta">
+                <div class="name">Bird</div>
+                <div class="time">3:45 PM</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filter sheet -->
+          <div class="sheet-backdrop" id="sheetBackdrop"></div>
+          <div class="filter-sheet" id="filterSheet">
+            <div class="sheet-handle"></div>
+            <div class="sheet-head">
+              <span class="ttl">Filter By</span>
+              <span class="clear">Clear All</span>
+            </div>
+            <div class="filter-row">
+              <span class="label">Unrecognized birds</span>
+              <span class="checkbox" data-cb></span>
+            </div>
+            <div class="filter-row">
+              <span class="label">Not birds</span>
+              <span class="checkbox" data-cb></span>
+            </div>
+            <div class="filter-upsell">
+              <div class="top">
+                <span class="ico">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 14c2-3 5-5 8-5 1.8 0 3 .6 4 1.5L20 8l-1 4 2 1-2.5 1.2c-.5 2.4-2.8 4.3-5.5 4.3-3 0-5.5-2-7-3.5z"/></svg>
+                </span>
+                <div class="copy">
+                  <span class="brand">Get Bird Watch</span> to filter by unique bird species in your neighborhood.
+                </div>
+              </div>
+              <div class="btn" data-upsell="filter">Get Bird Watch</div>
+            </div>
+            <div class="sheet-foot">
+              <button class="btn" id="cancelFilter">Cancel</button>
+              <button class="btn apply">Apply</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── BIRD NUMBERS DETAIL SCREEN ── -->
+        <div class="screen" data-screen="numbers">
+          <div class="numbers-header">
+            <button class="icon-btn back" id="backFromNumbers" aria-label="Back">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span class="title">Bird Numbers</span>
+          </div>
+          <div class="tabs">
+            <div class="tab active">Day</div>
+            <div class="tab">Week</div>
+            <div class="tab">Month</div>
+            <div class="tab">Year</div>
+          </div>
+          <div class="numbers-body">
+            <div class="range-row">
+              <span class="label">Today, Aug 27th</span>
+              <span class="filter-ico">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              </span>
+            </div>
+
+            <div class="detail-chart-card">
+              <div class="chart-wrap">
+                <div class="grid-line" style="top:0;"><span>16</span></div>
+                <div class="grid-line" style="top:25%;"><span>12</span></div>
+                <div class="grid-line" style="top:50%;"><span>8</span></div>
+                <div class="grid-line" style="top:75%;"><span>4</span></div>
+                <div class="grid-line" style="top:calc(100% - 18px);"><span>0</span></div>
+                <div class="bars">
+                  <div class="bar" style="height:55%"></div>
+                  <div class="bar" style="height:75%"></div>
+                  <div class="bar" style="height:35%"></div>
+                  <div class="bar" style="height:40%"></div>
+                  <div class="bar" style="height:45%"></div>
+                  <div class="bar" style="height:90%"></div>
+                  <div class="bar" style="height:50%"></div>
+                  <div class="bar" style="height:35%"></div>
+                  <div class="bar" style="height:25%"></div>
+                  <div class="bar" style="height:60%"></div>
+                  <div class="bar" style="height:65%"></div>
+                </div>
+                <div class="x-axis">
+                  <span>12 pm</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span><span style="opacity:.5">12 am</span>
+                </div>
+              </div>
+              <div class="visits-pill">
+                <b>45 visits</b>
+                in total
+              </div>
+            </div>
+
+            <div class="standout-h">Standout Species</div>
+
+            <div class="standout-upsell">
+              <div class="copy">
+                <b>Get Bird Watch</b> for more bird insights, from frequent visitors to rarest species.
+              </div>
+              <button class="btn" data-upsell="standout">Get Bird Watch</button>
+            </div>
+
+            <div class="locked-rank">
+              <span class="num">1</span>
+              <span class="bird-card">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 14c2-3 5-5 8-5 1.8 0 3 .6 4 1.5L20 8l-1 4 2 1-2.5 1.2c-.5 2.4-2.8 4.3-5.5 4.3-3 0-5.5-2-7-3.5z"/></svg>
+              </span>
+              <div class="skel"><div class="bar1"></div><div class="bar2"></div></div>
+            </div>
+            <div class="locked-rank">
+              <span class="num">2</span>
+              <span class="bird-card">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 14c2-3 5-5 8-5 1.8 0 3 .6 4 1.5L20 8l-1 4 2 1-2.5 1.2c-.5 2.4-2.8 4.3-5.5 4.3-3 0-5.5-2-7-3.5z"/></svg>
+              </span>
+              <div class="skel"><div class="bar1" style="width:70%"></div><div class="bar2" style="width:50%"></div></div>
+            </div>
+            <div class="locked-rank">
+              <span class="num">3</span>
+              <span class="bird-card">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 14c2-3 5-5 8-5 1.8 0 3 .6 4 1.5L20 8l-1 4 2 1-2.5 1.2c-.5 2.4-2.8 4.3-5.5 4.3-3 0-5.5-2-7-3.5z"/></svg>
+              </span>
+              <div class="skel"><div class="bar1" style="width:75%"></div><div class="bar2" style="width:45%"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── EVENT DETAIL SCREEN ── -->
+        <div class="screen" data-screen="event">
+          <div class="event-header">
+            <button class="icon-btn" id="backFromEvent" aria-label="Back">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span class="title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="3"/>
+                <line x1="3" y1="3" x2="21" y2="21"/>
+              </svg>
+              Joe's Bird Feeder
+            </span>
+            <span class="right">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4L7.55 4.24"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+            </span>
+          </div>
+
+          <div class="event-meta">
+            <div>
+              <div class="name">Bird</div>
+              <div class="ts">detected at 10:34 AM</div>
+            </div>
+            <span class="bird-bubble">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 14c2-3 5-5 8-5 1.8 0 3 .6 4 1.5L20 8l-1 4 2 1-2.5 1.2c-.5 2.4-2.8 4.3-5.5 4.3-3 0-5.5-2-7-3.5z"/></svg>
+            </span>
+          </div>
+
+          <div class="event-video">
+            <div class="mountain"></div>
+            <div class="bird-art">
+              <svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+                <!-- hummingbird-like body -->
+                <ellipse cx="110" cy="70" rx="55" ry="32" fill="#5a4a3a"/>
+                <circle cx="65" cy="55" r="22" fill="#5a4a3a"/>
+                <circle cx="58" cy="50" r="2.5" fill="#000"/>
+                <polygon points="42,55 22,50 42,60" fill="#7a3a2a"/>
+                <!-- belly accent -->
+                <ellipse cx="100" cy="80" rx="35" ry="14" fill="#a08070"/>
+                <!-- tail -->
+                <polygon points="160,65 195,55 195,80" fill="#3a2a1a"/>
+                <!-- branch -->
+                <rect x="20" y="100" width="180" height="6" fill="#3a2010"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="feedback-bar">
+            <span class="q">Did we get it right?</span>
+            <button class="thumb-btn" id="thumbUp" aria-label="Yes">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>
+            </button>
+            <button class="thumb-btn" id="thumbDown" aria-label="No">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3zm7-13h3a2 2 0 012 2v7a2 2 0 01-2 2h-3"/></svg>
+            </button>
+            <button class="bw-pill" data-upsell="event">
+              <span class="bird-mini">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 14c2-3 5-5 8-5 1.8 0 3 .6 4 1.5L20 8l-1 4 2 1-2.5 1.2c-.5 2.4-2.8 4.3-5.5 4.3-3 0-5.5-2-7-3.5z"/></svg>
+              </span>
+              <span class="play-tri"></span>
+            </button>
+          </div>
+
+          <div class="event-spacer"></div>
+
+          <div class="event-dots">
+            <span class="dot active"></span>
+            <span class="dot"></span>
+          </div>
+
+          <div class="event-actions">
+            <div class="act">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 3 21 12 3 21 3 3" opacity=".2"/><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+              Go Live
+            </div>
+            <div class="act">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="4" x2="10" y2="10"/></svg>
+              SD Card
+            </div>
+            <div class="act locked">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              Snapshots
+            </div>
+            <div class="act">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              Share
+            </div>
+          </div>
+
+          <!-- Feedback sheets -->
+          <div class="fb-backdrop" id="fbBackdrop"></div>
+          <div class="fb-sheet" id="fbSheetUp">
+            <div class="sheet-handle"></div>
+            <h3>
+              <span class="top">Great to hear!</span>
+              Submit your feedback to Wyze?
+            </h3>
+            <p class="priv">
+              By submitting your feedback, you agree to use your video to train and improve AI models for Wyze. To learn more, <a href="#">view our privacy policy.</a>
+            </p>
+            <div class="fb-row" data-fb-close>Submit</div>
+            <div class="fb-row" data-fb-close>No, Thanks</div>
+            <div class="cancel-row" data-fb-close>Cancel</div>
+          </div>
+
+          <div class="fb-sheet" id="fbSheetDown">
+            <div class="sheet-handle"></div>
+            <h3>
+              <span class="top">Sorry about that.</span>
+              What did we get wrong?
+            </h3>
+            <p class="priv">
+              By submitting your feedback, you agree to use your video to train and improve AI models for Wyze. To learn more, <a href="#">view our privacy policy.</a>
+            </p>
+            <div class="fb-row input">There are no birds</div>
+            <div class="cancel-row" data-fb-close>Cancel</div>
+          </div>
+        </div>
+
+        </div><!-- /screens -->
+
+        <!-- Home indicator -->
+        <div class="home-ind"></div>
+
+        <!-- ────── IAP Modal ────── -->
+        <div class="modal-backdrop" id="backdrop"></div>
+        <div class="modal" id="modal">
+          <div class="modal-header">
+            <span style="width:28px"></span>
+            <span class="modal-title">Get Bird Watch</span>
+            <button class="modal-close" id="closeBtn" aria-label="Close">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="compare-row">
+            <span class="left">Free</span>
+            <span class="right"><span class="badge">Bird Watch</span></span>
+          </div>
+
+          <div class="compare-card">
+            <div class="divider"></div>
+            <!-- left feature pills -->
+            <div class="pill-stack left">
+              <div class="f-pill thumb">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <span>Bird<br/>Thumbnail</span>
+              </div>
+              <div class="f-pill"><span class="ico">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c2-3 5-5 8-5 4 0 7 3 8 5"/><path d="M13 12h3l-1 3"/></svg>
+              </span>Bird Detection</div>
+              <div class="f-pill"><span class="ico">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+              </span>Bird Notification</div>
+              <div class="f-pill"><span class="ico">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="7" y1="5" x2="7" y2="19"/></svg>
+              </span>SD Recording</div>
+            </div>
+
+            <!-- center cam image -->
+            <div class="cam-img">
+              <svg viewBox="0 0 140 140" width="130" height="130">
+                <!-- cam body -->
+                <rect x="22" y="22" width="96" height="96" rx="16" fill="#fff" stroke="#dcdcdc" stroke-width="1.5"/>
+                <!-- lens ring -->
+                <circle cx="70" cy="70" r="34" fill="#1a1a1a"/>
+                <circle cx="70" cy="70" r="28" fill="#2c2c2c"/>
+                <circle cx="70" cy="70" r="22" fill="#0a0a0a"/>
+                <circle cx="70" cy="70" r="14" fill="#1f1f1f"/>
+                <circle cx="62" cy="62" r="4" fill="rgba(255,255,255,0.25)"/>
+                <!-- mount -->
+                <path d="M50 118 L90 118 L98 134 L42 134 Z" fill="#fff" stroke="#dcdcdc" stroke-width="1.5"/>
+                <!-- led -->
+                <circle cx="32" cy="32" r="2" fill="#1DF0BB"/>
+              </svg>
+            </div>
+
+            <!-- right feature pills -->
+            <div class="pill-stack right">
+              <div class="f-pill video">
+                <div class="video-thumb">
+                  <div class="play"></div>
+                  <span class="tag">Cardinal</span>
+                </div>
+              </div>
+              <div class="f-pill">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><polyline points="3 10 21 10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+                60-Day Cloud
+              </div>
+              <div class="f-pill">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 5 5.5.8-4 3.9.9 5.5L12 14.8 7.1 17.2 8 11.7 4 7.8 9.5 7z"/></svg>
+                3,000+ Species
+              </div>
+              <div class="f-pill">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+                Bird Snapshot
+              </div>
+              <div class="f-pill">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 3H8a2 2 0 00-2 2v11l-3 3V5a4 4 0 014-4h12z"/><rect x="6" y="7" width="15" height="14" rx="2"/></svg>
+                Bird Album
+              </div>
+              <div class="f-pill">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg>
+                Bird Log
+              </div>
+            </div>
+          </div>
+
+          <div class="sub-block">
+            <h2>Enhance your Bird Cam with <span class="accent">Bird Watch</span></h2>
+            <p>AI species ID, 60-day cloud videos, bird log and album.</p>
+          </div>
+
+          <div class="price-row">
+            <div class="price-card" data-plan="monthly" id="planMonthly">
+              <div class="label">
+                <span>Monthly</span>
+                <span class="radio"></span>
+              </div>
+              <div class="amount">$5.99 <span>USD/Month</span></div>
+            </div>
+            <div class="price-card annual selected" data-plan="annual" id="planAnnual">
+              <div class="label">
+                <span>Annual</span>
+                <span class="save">SAVE 17%</span>
+                <span class="radio"></span>
+              </div>
+              <div class="amount">$59.99 <span>USD/Year</span></div>
+            </div>
+          </div>
+
+          <div class="modal-foot">
+            <div class="fine-print">30-day free trial, then $59.99/year per Bird Cam. Cancel anytime before the free trial ends.</div>
+            <button class="cta">Start My 30-Day Free Trial</button>
+            <div class="tos">Terms of Service</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="hint">Tap <code>Get [Bird]</code> in the header to open the Bird Watch IAP.</div>
+  </div>
+</div>
+
+<script>
+const backdrop = document.getElementById('backdrop');
+const modal = document.getElementById('modal');
+const closeBtn = document.getElementById('closeBtn');
+
+function openIAP() {
+  backdrop.classList.add('open');
+  modal.classList.add('open');
+}
+function closeIAP() {
+  backdrop.classList.remove('open');
+  modal.classList.remove('open');
+}
+document.getElementById('getBirdBtn').addEventListener('click', openIAP);
+document.getElementById('getBirdBtn2').addEventListener('click', openIAP);
+closeBtn.addEventListener('click', closeIAP);
+backdrop.addEventListener('click', closeIAP);
+
+// Inline upsell entry points → same IAP
+document.querySelectorAll('[data-upsell]').forEach(el => {
+  el.addEventListener('click', openIAP);
+});
+
+// Screen navigation
+const homeScreen = document.querySelector('.screen[data-screen="home"]');
+const sightingsScreen = document.querySelector('.screen[data-screen="sightings"]');
+const numbersScreen = document.querySelector('.screen[data-screen="numbers"]');
+const eventScreen = document.querySelector('.screen[data-screen="event"]');
+function showSightings() {
+  homeScreen.classList.add('pushed');
+  sightingsScreen.classList.add('active');
+  eventScreen.classList.remove('active');
+}
+function showNumbers() {
+  homeScreen.classList.add('pushed');
+  numbersScreen.classList.add('active');
+}
+function showEvent() {
+  homeScreen.classList.add('pushed');
+  sightingsScreen.classList.remove('active');
+  eventScreen.classList.add('active');
+}
+function showHome() {
+  homeScreen.classList.remove('pushed');
+  sightingsScreen.classList.remove('active');
+  numbersScreen.classList.remove('active');
+  eventScreen.classList.remove('active');
+  closeFilter();
+  closeFbSheets();
+}
+document.getElementById('openSightings').addEventListener('click', showSightings);
+document.getElementById('backFromSightings').addEventListener('click', showHome);
+document.getElementById('openNumbers').addEventListener('click', showNumbers);
+document.getElementById('backFromNumbers').addEventListener('click', showHome);
+document.getElementById('backFromEvent').addEventListener('click', showSightings);
+
+// Sighting row → event detail
+document.querySelectorAll('.sight-row').forEach(r => {
+  r.style.cursor = 'pointer';
+  r.addEventListener('click', showEvent);
+});
+
+// Thumb up / down feedback sheets
+const fbBackdrop = document.getElementById('fbBackdrop');
+const fbSheetUp = document.getElementById('fbSheetUp');
+const fbSheetDown = document.getElementById('fbSheetDown');
+function closeFbSheets() {
+  fbBackdrop.classList.remove('open');
+  fbSheetUp.classList.remove('open');
+  fbSheetDown.classList.remove('open');
+  document.querySelectorAll('#thumbUp, #thumbDown').forEach(b => b.classList.remove('active'));
+}
+document.getElementById('thumbUp').addEventListener('click', (e) => {
+  closeFbSheets();
+  e.currentTarget.classList.add('active');
+  fbBackdrop.classList.add('open');
+  fbSheetUp.classList.add('open');
+});
+document.getElementById('thumbDown').addEventListener('click', (e) => {
+  closeFbSheets();
+  e.currentTarget.classList.add('active');
+  fbBackdrop.classList.add('open');
+  fbSheetDown.classList.add('open');
+});
+fbBackdrop.addEventListener('click', closeFbSheets);
+document.querySelectorAll('[data-fb-close]').forEach(el => el.addEventListener('click', closeFbSheets));
+
+// Tab switching on Bird Numbers
+document.querySelectorAll('.tabs .tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tabs .tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+  });
+});
+
+// Filter sheet
+const sheet = document.getElementById('filterSheet');
+const sheetBackdrop = document.getElementById('sheetBackdrop');
+function openFilter() {
+  sheet.classList.add('open');
+  sheetBackdrop.classList.add('open');
+}
+function closeFilter() {
+  sheet.classList.remove('open');
+  sheetBackdrop.classList.remove('open');
+}
+document.getElementById('openFilter').addEventListener('click', openFilter);
+document.getElementById('cancelFilter').addEventListener('click', closeFilter);
+sheetBackdrop.addEventListener('click', closeFilter);
+
+// Filter checkboxes
+document.querySelectorAll('[data-cb]').forEach(cb => {
+  cb.addEventListener('click', () => cb.classList.toggle('checked'));
+});
+
+// Plan switching
+const planMonthly = document.getElementById('planMonthly');
+const planAnnual = document.getElementById('planAnnual');
+planMonthly.addEventListener('click', () => { planMonthly.classList.add('selected'); planAnnual.classList.remove('selected'); });
+planAnnual.addEventListener('click', () => { planAnnual.classList.add('selected'); planMonthly.classList.remove('selected'); });
+</script>
+</body>
+</html>
