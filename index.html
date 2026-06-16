@@ -2048,6 +2048,15 @@ document.querySelectorAll('.sight-row').forEach(r => {
   r.addEventListener('click', showEvent);
 });
 
+// Home Recent Sightings thumbnail cards → event detail
+document.querySelectorAll('.sightings .sight-card').forEach(c => {
+  c.style.cursor = 'pointer';
+  c.addEventListener('click', (e) => {
+    e.stopPropagation();
+    showEvent();
+  });
+});
+
 // Thumb up / down feedback sheets
 const fbBackdrop = document.getElementById('fbBackdrop');
 const fbSheetUp = document.getElementById('fbSheetUp');
